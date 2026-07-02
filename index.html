@@ -1337,15 +1337,26 @@ function startQuiz(){
 
   if(questions.length === 0){ alert('Không có câu hỏi nào!'); return; }
 
+  // Lọc bỏ câu hỏi không hợp lệ (thiếu correctAnswer hoặc thiếu options)
+  const invalidQs = questions.filter(q => !q.correctAnswer || !q.options || q.options.length === 0 || !q.options.find(o=>o.key===q.correctAnswer));
+  if(invalidQs.length > 0){
+    console.warn('Câu hỏi không hợp lệ (thiếu đáp án):', invalidQs.map(q=>`Câu ${q.number}: ${q.text.substring(0,50)}`));
+    questions = questions.filter(q => q.correctAnswer && q.options && q.options.length > 0 && q.options.find(o=>o.key===q.correctAnswer));
+    if(questions.length === 0){ alert('Tất cả câu hỏi trong phần này đều thiếu đáp án! Hãy vào Ngân hàng để kiểm tra lại.'); return; }
+    if(invalidQs.length > 0) alert(`⚠️ Đã bỏ qua ${invalidQs.length} câu hỏi thiếu đáp án.`);
+  }
+
   // Xáo trộn câu hỏi và đáp án
   questions = shuffle(questions).map(q=>{
     const shuffledOpts = shuffle([...q.options]);
-    const correctText = q.options.find(o=>o.key===q.correctAnswer).text;
+    const correctOpt = q.options.find(o=>o.key===q.correctAnswer);
+    if(!correctOpt){ return null; } // Phòng trường hợp lọt lưới
+    const correctText = correctOpt.text;
     const keys = ['A','B','C','D'];
     const newOpts = shuffledOpts.map((o,i)=>({key:keys[i], text:o.text}));
-    const newCorrect = newOpts.find(o=>o.text===correctText).key;
+    const newCorrect = newOpts.find(o=>o.text===correctText)?.key || 'A';
     return { ...q, options: newOpts, correctAnswer: newCorrect, originalCorrectText: correctText };
-  });
+  }).filter(q=>q!==null);
 
   // Thiết lập quiz
   currentQuiz = {
